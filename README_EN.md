@@ -55,81 +55,85 @@ print(f"Chirp mass: {r.chirp_mass_solar:.1f} M☉  Strain: {r.strain_amplitude:.
 
 ---
 
-## Physics Snapshots — What the Engine Actually Produces
+## Physics Snapshots — Values Derived from Dynamic Flow
 
-> Real outputs from `v0.1.0`. The fastest way to verify the physics is implemented correctly.
+> Outputs from `v0.1.0`.  
+> These numbers reflect **internal flow consistency within the model** — not empirical ground-truth validation. Real-world comparison requires a separate observational calibration step.
 
 ---
 
-### Snap-A · Tsunami Shallow-Water Dispersion
+### Snap-A · Tsunami — Dispersion Flow Convergence
 
-Error between full dispersion `ω² = gk·tanh(kd)` and shallow-water limit `c = √(gd)`:
+Difference between the full dispersion relation `ω² = gk·tanh(kd)` and the shallow-water approximation `c = √(gd)` as a function of depth.
 
-| Depth | Computed | Theory (√gd) | Error |
-|-------|----------|--------------|-------|
-| 100 m | 31.31 m/s | 31.32 m/s | **0.008 %** |
+| Depth | Dispersion flow | Shallow approx (√gd) | Difference |
+|-------|----------------|----------------------|-----------|
+| 100 m | 31.31 m/s | 31.32 m/s | 0.008 % |
 | 1000 m | 98.95 m/s | 99.03 m/s | 0.083 % |
 | 4000 m | 197.40 m/s | 198.06 m/s | 0.331 % |
 
-*Full dispersion converges to within 0.33 % of the shallow-water limit — usable for real tsunami propagation tracking.*
+*Both flows converge to within 0.33 % in shallow-water conditions — internal flow consistency confirmed. Actual seafloor geometry and tidal effects are not included.*
 
 ---
 
-### Snap-B · S-P Delay → Epicentral Distance Recovery
+### Snap-B · S-P Delay → Distance Inversion Flow
 
-`Δt = d·(1/v_S − 1/v_P)` inverted back to distance:
+Forward flow `Δt = d·(1/v_S − 1/v_P)`, then inverted — how well does the round-trip close within the model?
 
-| True Distance | S-P Delay | Recovered | Error |
-|---------------|-----------|-----------|-------|
-| 50 km | 6.07 s | 51.0 km | **0.00 %** |
+| Input distance | S-P delay | Inverted | Round-trip deviation |
+|----------------|-----------|----------|---------------------|
+| 50 km | 6.07 s | 51.0 km | 0.00 % |
 | 100 km | 11.96 s | 100.5 km | 0.03 % |
 | 500 km | 59.54 s | 500.1 km | 0.01 % |
 
-*Single-station recovery error < 0.03 %. Three or more stations enables full triangulation (`triangulation_possible=True`).*
+*Self-consistency of forward/inverse flow within a 1D homogeneous crust model. Real crust heterogeneity, anisotropy, and velocity gradients will introduce additional deviation.*
 
 ---
 
-### Snap-C · Richter Magnitude — Energy Scale
+### Snap-C · Magnitude–Energy Flow — Gutenberg-Richter
 
-| M | Energy | TNT equivalent |
-|---|--------|---------------|
-| 3.0 | 2.0 × 10⁹ J | **0.5 ton** |
-| 5.0 | 2.0 × 10¹² J | 477 ton |
-| 6.3 | 1.8 × 10¹⁴ J | 42,500 ton |
-| 7.0 | 2.0 × 10¹⁵ J | 477,000 ton |
-| 9.0 | 2.0 × 10¹⁸ J | **480 million ton** |
+Values derived from the empirical flow `E = 10^(1.5M + 4.8)`.
 
-*Each +1 in magnitude = ×31.6 in energy (10^1.5). M9 vs M3: a factor of 10⁹.*
+| M | Derived energy | TNT equivalent |
+|---|----------------|---------------|
+| 3.0 | 2.0 × 10⁹ J | ~0.5 ton |
+| 5.0 | 2.0 × 10¹² J | ~477 ton |
+| 6.3 | 1.8 × 10¹⁴ J | ~42,500 ton |
+| 7.0 | 2.0 × 10¹⁵ J | ~477,000 ton |
+| 9.0 | 2.0 × 10¹⁸ J | ~480 million ton |
 
----
-
-### Snap-D · Building Resonance — Damping vs. Amplification
-
-Driving frequency = natural frequency (full resonance condition):
-
-| Damping ζ | Q-factor | Amplitude × | Example structure |
-|-----------|---------|-------------|------------------|
-| 0.01 | 50.0 | **50×** | Bare steel frame |
-| 0.05 | 10.0 | **10×** | RC building (code baseline) |
-| 0.10 | 5.0 | 5× | High-damping design |
-| 1.00 | 0.5 | 0.5× | Critical damping — no resonance |
-
-*ζ = 0.05 code-baseline buildings experience 10× displacement amplification when excited at their natural frequency — the physical basis of seismic design requirements.*
+*Each +1 magnitude = ×31.6 in energy flow (10^1.5). This is an empirical regression relation — actual radiated energy varies by event.*
 
 ---
 
-### Snap-E · GW150914 — SNR vs. Distance
+### Snap-D · Oscillator Resonance — Damping vs. Amplitude Flow
 
-Same event (36 M☉ + 29 M☉), different observer distances:
+Single-DOF harmonic oscillator at driving frequency = natural frequency.
 
-| Distance | Strain | SNR | Detectable |
-|----------|--------|-----|-----------|
-| 10 Mpc | 5.24 × 10⁻²⁰ | 524 | ✓ |
-| 410 Mpc | 1.28 × 10⁻²¹ | **12.8** | ✓ (actual GW150914 ≈ 24) |
-| 1000 Mpc | 5.24 × 10⁻²² | 5.2 | ✓ |
-| 5000 Mpc | 1.05 × 10⁻²² | 1.1 | △ (marginal) |
+| Damping ζ | Q-factor | Amplitude × | Reference structure |
+|-----------|---------|-------------|---------------------|
+| 0.01 | 50.0 | ~50× | Low-damping steel frame |
+| 0.05 | 10.0 | ~10× | RC building (typical design range) |
+| 0.10 | 5.0 | ~5× | High-damping design |
+| 1.00 | 0.5 | ~0.5× | Critically damped — no resonance flow |
 
-*strain ∝ 1/d. SNR=12.8 at 410 Mpc is ~½ of the real LIGO value (~24) — the gap is expected from a simplified single-number sensitivity input.*
+*Idealized single-DOF linear flow. Real structures are multi-DOF with nonlinear, frequency-dependent damping.*
+
+---
+
+### Snap-E · Gravitational Wave — strain/SNR Distance Flow
+
+`h₀ ∝ 1/d` flow from linearized GR; simplified single-number SNR.  
+Parameters: M₁=36 M☉, M₂=29 M☉, f=35 Hz, sensitivity proxy=1e-22.
+
+| Distance | Derived strain | Flow SNR | Note |
+|----------|---------------|---------|------|
+| 10 Mpc | 5.24 × 10⁻²⁰ | 524 | — |
+| 410 Mpc | 1.28 × 10⁻²¹ | 12.8 | GW150914 measured ≈ 24 |
+| 1000 Mpc | 5.24 × 10⁻²² | 5.2 | — |
+| 5000 Mpc | 1.05 × 10⁻²² | 1.1 | near threshold |
+
+*strain ∝ 1/d is a linearized GR approximation. The SNR gap vs. the real GW150914 detection (~24) is expected: real LIGO uses a frequency-dependent noise curve (ASD), not a single-number proxy.*
 
 ---
 
