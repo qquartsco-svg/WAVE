@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wave-propagation-foundation"
+version = "0.1.0"
+description = "Unified wave tracking: general wave equation, oscillator/resonance, seismic P/S/surface waves, ocean/acoustic waves, and gravitational waves."
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
