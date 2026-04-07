@@ -20,13 +20,15 @@
 
 ## Five Layers
 
-| Layer | Physics | Key Outputs |
-|-------|---------|-------------|
-| **L1 Wave Equation** | ∂²u/∂t² = c²∇²u | λ, k, ω, attenuation, energy flux |
-| **L2 Oscillator** | Damped/forced SHO | Q-factor, resonance curve, decay time |
-| **L3 Seismic** | P/S/Rayleigh/Love | Travel times, S-P delay, PGA, MMI, triangulation |
-| **L4 Surface & Acoustic** | ω²=gk·tanh(kd), sound speed | Phase/group velocity, deep/shallow regime, impedance |
-| **L5 Gravitational Wave** | Linearized GR, chirp mass | h₀ strain, SNR, ISCO freq, merger time, detectability |
+| Layer | Name | Domain | Key Outputs |
+|-------|------|--------|-------------|
+| **L1** | Wave Equation | All wave types | λ, k, ω, attenuation, energy flux |
+| **L2** | Oscillator & Resonance | Vibrating systems / structural response | Q-factor, resonance curve, decay time |
+| **L3** | Seismic Waves | Seismic (P/S/surface) | Travel times, S-P delay, PGA†, MMI, triangulation |
+| **L4** | Surface & Acoustic | Ocean surface waves · sound | Phase/group velocity, dispersion regime, impedance |
+| **L5** | Gravitational Waves | Compact binary inspiral | chirp mass, h₀ strain, SNR, ISCO freq |
+
+† PGA is a simplified proxy — see [Usage Guide](#quick-start) for scope note.
 
 ---
 
@@ -39,10 +41,15 @@ r = screen_seismic(SeismicInput(magnitude=6.3, depth_km=15, station_count=5))
 print(f"S-P delay: {r.sp_delay_s:.1f}s  PGA: {r.peak_ground_acceleration_g:.4f}g  MMI: {r.intensity_mmi}")
 ```
 
+> ⚠️ **PGA is a proxy estimate.**  
+> The current implementation uses a simplified empirical form of the NGA-West2 attenuation function. **Site amplification, crustal structure, and directivity are not modeled.**  
+> MMI conversion is derived from the same proxy flow. For precise ground-motion assessment, apply a full GMPE. NGA-West2 full implementation is planned for v0.2.
+
 ```python
 from wave_propagation import screen_gravitational_wave, GravWaveInput
 
 # GW150914 reproduction — use detector_sensitivity_strain=1e-22 (Advanced LIGO approx @ 35 Hz)
+# L5 scope: inspiral strain screening only — merger/ringdown waveforms not included.
 r = screen_gravitational_wave(GravWaveInput(
     m1_solar=36, m2_solar=29, distance_mpc=410,
     orbital_frequency_hz=35,
@@ -52,6 +59,23 @@ print(f"Chirp mass: {r.chirp_mass_solar:.1f} M☉  Strain: {r.strain_amplitude:.
 ```
 
 > `detector_sensitivity_strain` is a simplified single-number proxy. Real LIGO uses a frequency-dependent noise curve (ASD).
+
+---
+
+## Ω Scoring
+
+```python
+Ω_overall = mean([executed layers only])
+```
+
+Each layer's Ω reflects the **physical trackability within that layer's dynamic flow**: specifically, (1) whether the input parameters fall within the physically reachable domain, (2) continuity of the wave propagation flow, and (3) internal consistency of the output values. Layers that are not executed are excluded from the overall average.
+
+| Ω range | Verdict | Meaning |
+|---------|---------|---------|
+| ≥ 0.80 | `OPERATIONAL` | Trackable |
+| ≥ 0.55 | `FEASIBLE` | Conditionally trackable |
+| ≥ 0.30 | `EXPERIMENTAL` | Experimental |
+| < 0.30 | `NOT_FEASIBLE` | Not feasible under current conditions |
 
 ---
 
@@ -139,13 +163,17 @@ Parameters: M₁=36 M☉, M₂=29 M☉, f=35 Hz, sensitivity proxy=1e-22.
 
 ## Ecosystem Bridges
 
-| Engine | Bridge | Role |
-|--------|--------|------|
-| FrequencyCore | `try_frequencycore_bridge()` | Seismic → spectral decomposition |
-| Oceanus | `try_oceanus_bridge()` | Surface wave ↔ SWE |
-| Eurus | `try_eurus_bridge()` | Atmospheric acoustic coupling |
-| Optics | `try_optics_bridge()` | EM wave comparison |
-| OrbitalCore | `try_orbitalcore_bridge()` | Gravity field → GW source |
+| Engine | Bridge | Role | Coupling |
+|--------|--------|------|---------|
+| **FrequencyCore** | `try_frequencycore_bridge()` | Seismic signal → spectral decomposition | `direct` |
+| **Oceanus** | `try_oceanus_bridge()` | Surface wave ↔ SWE coupling | `direct` |
+| **OrbitalCore** | `try_orbitalcore_bridge()` | Orbital parameters → GW source input | `direct` |
+| **Eurus** | `try_eurus_bridge()` | Atmospheric boundary conditions for acoustic/gravity waves | `indirect` |
+| **Optics** | `try_optics_bridge()` | EM vs. mechanical wave dispersion comparison | `comparative` |
+
+- **direct** — output flows directly into the partner engine as input
+- **indirect** — routed via environmental/boundary parameters
+- **comparative** — analogy / cross-domain comparison; physical domains differ
 
 All bridges degrade gracefully to `None`.
 

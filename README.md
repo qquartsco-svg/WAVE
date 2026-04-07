@@ -72,6 +72,18 @@
 
 ---
 
+## 레이어 구성
+
+| 레이어 | 이름 | 대상 | 주요 출력 |
+|--------|------|------|---------|
+| **L1** | Wave Equation | 모든 파동 공통 | λ, k, ω, 감쇠, 에너지 플럭스 |
+| **L2** | Oscillator & Resonance | 진동자·구조 반응 | Q인수, 공명 곡선, 감쇠 시간 |
+| **L3** | Seismic Waves | 지진파 (P/S/표면파) | 이동 시간, S-P 시간차, PGA, MMI, 삼각측량 |
+| **L4** | Surface & Acoustic | 수면파·음파 | 위상/군속도, 분산 체계, 음향 임피던스 |
+| **L5** | Gravitational Waves | 중력파 (inspiral) | chirp mass, strain h₀, SNR, ISCO |
+
+---
+
 ## 5개 레이어
 
 ### L1: Wave Equation (일반 파동 방정식)
@@ -111,6 +123,9 @@ Z = ρ·c                  음향 임피던스
 
 ### L5: Gravitational Waves (중력파)
 
+> **범위**: 이 레이어는 **inspiral 단계의 strain 스크리닝**에 초점을 둔다.  
+> merger + ringdown waveform 모델링은 포함되지 않으며, 단일 검출기 기준 단순화 SNR을 도출한다.
+
 ```
 M_c = (m₁m₂)^(3/5)/(m₁+m₂)^(1/5)    chirp mass
 h₀ = (4G^(5/3)/c⁴)·M_c^(5/3)·(πf)^(2/3)/d    strain
@@ -125,6 +140,10 @@ L_gw = (32/5)·(G⁴/c⁵)·M_c^(10/3)·(πf)^(10/3)
 ```python
 Ω_overall = mean([실행된 레이어만 포함])
 ```
+
+각 레이어 Ω는 **해당 흐름 내 물리적 추적 가능성**을 반영한다.  
+구체적으로는 ① 입력 파라미터의 물리 도메인 내 도달 가능성, ② 파동 전파 흐름의 연속성, ③ 출력값의 모델 내 정합성을 종합해 0–1 사이로 도출된다.  
+레이어가 실행되지 않으면 overall 평균에서 제외된다.
 
 | Ω 범위 | Verdict | 의미 |
 |--------|---------|------|
@@ -152,7 +171,9 @@ print(f"PGA: {r.peak_ground_acceleration_g:.4f}g  진도: {r.intensity_mmi}")
 print(f"삼각측량: {r.triangulation_possible}")
 ```
 
-> **PGA 주의**: 현재 PGA는 NGA-West2 함수형을 단순화한 proxy 추정값입니다. 실제 지반 증폭, 지각 구조, 방향성 효과는 반영되지 않으며 v0.2에서 개선 예정입니다.
+> ⚠️ **PGA는 proxy 추정값입니다.**  
+> 현재 구현은 NGA-West2 감쇠 함수형을 단순화한 경험적 proxy이며, **실제 지반 증폭 · 지각 구조 · 방향성 효과는 반영되지 않습니다.**  
+> MMI 변환 결과도 동일한 proxy 흐름에서 도출됩니다. 정밀 지반 운동 평가에는 별도 GMPE 적용이 필요하며, v0.2에서 NGA-West2 완전 구현 예정입니다.
 
 ### 중력파 탐지 (GW150914 재현)
 
@@ -275,13 +296,17 @@ print(f"Overall Ω={r.omega_overall:.3f} [{r.verdict.value}]")
 
 ## 에코시스템 엔진 연결
 
-| 엔진 | 브리지 | 연결 |
-|------|--------|------|
-| **FrequencyCore** | `try_frequencycore_bridge()` | 지진 신호 → 스펙트럼 분해 |
-| **Oceanus** | `try_oceanus_bridge()` | 수면파 ↔ SWE 연동 |
-| **Eurus** | `try_eurus_bridge()` | 대기 음파/중력파 |
-| **Optics** | `try_optics_bridge()` | 전자기파 비교 |
-| **OrbitalCore** | `try_orbitalcore_bridge()` | 중력원 → GW 소스 |
+| 엔진 | 브리지 | 연결 내용 | 강도 |
+|------|--------|---------|------|
+| **FrequencyCore** | `try_frequencycore_bridge()` | 지진 신호 → 스펙트럼 분해 | `direct` |
+| **Oceanus** | `try_oceanus_bridge()` | 수면파 ↔ SWE 직접 연동 | `direct` |
+| **OrbitalCore** | `try_orbitalcore_bridge()` | 중력원 파라미터 → GW 소스 입력 | `direct` |
+| **Eurus** | `try_eurus_bridge()` | 대기 음파·중력파 경계 조건 | `indirect` |
+| **Optics** | `try_optics_bridge()` | EM파 vs 기계파 분산 비교 | `comparative` |
+
+- **direct**: 출력값이 상대 엔진 입력으로 직접 흐름
+- **indirect**: 경계 조건·환경 파라미터를 경유해 연결
+- **comparative**: 아날로지 비교 목적 — 물리 도메인이 다름
 
 모든 브리지는 graceful degradation — 없으면 `None`, 코어는 독립 실행.
 
