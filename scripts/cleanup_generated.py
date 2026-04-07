@@ -10,6 +10,10 @@ def main() -> None:
         if path.is_dir():
             shutil.rmtree(path)
             removed += 1
+    for path in ROOT.rglob("*.egg-info"):
+        if path.is_dir():
+            shutil.rmtree(path)
+            removed += 1
     for name in [".pytest_cache", ".DS_Store"]:
         for path in ROOT.rglob(name):
             if path.is_dir():

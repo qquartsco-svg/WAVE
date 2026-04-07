@@ -7,7 +7,12 @@ def sha(p):
     h = hashlib.sha256(); h.update(p.read_bytes()); return h.hexdigest()
 lines = []
 for p in sorted(ROOT.rglob("*")):
-    if p.is_dir() or any(s in p.parts for s in SKIP) or p.name == "SIGNATURE.sha256":
+    if (
+        p.is_dir()
+        or any(s in p.parts for s in SKIP)
+        or any(part.endswith(".egg-info") for part in p.parts)
+        or p.name == "SIGNATURE.sha256"
+    ):
         continue
     lines.append(f"{sha(p)}  {p.relative_to(ROOT)}")
 SIG.write_text("\n".join(lines) + "\n")
