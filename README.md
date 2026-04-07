@@ -152,19 +152,28 @@ print(f"PGA: {r.peak_ground_acceleration_g:.4f}g  진도: {r.intensity_mmi}")
 print(f"삼각측량: {r.triangulation_possible}")
 ```
 
+> **PGA 주의**: 현재 PGA는 NGA-West2 함수형을 단순화한 proxy 추정값입니다. 실제 지반 증폭, 지각 구조, 방향성 효과는 반영되지 않으며 v0.2에서 개선 예정입니다.
+
 ### 중력파 탐지 (GW150914 재현)
 
 ```python
 from wave_propagation import screen_gravitational_wave, GravWaveInput
 
+# GW150914: m1=36 M☉, m2=29 M☉, d=410 Mpc
+# LIGO Advanced 감도 @ 35 Hz ≈ 1e-22 (설계 감도 근사)
 r = screen_gravitational_wave(GravWaveInput(
     m1_solar=36, m2_solar=29, distance_mpc=410,
-    orbital_frequency_hz=35, detector_sensitivity_strain=1e-21,
+    orbital_frequency_hz=35,
+    detector_sensitivity_strain=1e-22,   # Advanced LIGO 감도 근사
 ))
 print(f"Chirp mass: {r.chirp_mass_solar:.1f} M☉")
-print(f"Strain: {r.strain_amplitude:.2e}  SNR: {r.signal_to_noise:.1f}")
+print(f"Strain:     {r.strain_amplitude:.2e}")
+print(f"SNR:        {r.signal_to_noise:.1f}   (실제 GW150914 ≈ 24)")
+print(f"ISCO freq:  {r.isco_frequency_hz:.1f} Hz")
 print(f"Detectable: {r.detectable}")
 ```
+
+> `detector_sensitivity_strain`은 관심 주파수에서의 단순화된 단일 수치입니다. 실제 LIGO는 주파수 의존적 noise curve(ASD)를 사용합니다.
 
 ### 통합 분석 (지구+우주 동시)
 
@@ -211,7 +220,8 @@ print(f"Overall Ω={r.omega_overall:.3f} [{r.verdict.value}]")
 
 ```bash
 pip install -e ".[dev]"
-python3 -m pytest tests/ -q     # 39 passed
+python3 -m pytest tests/ -q            # 39 passed
+python3 examples/wave_demo.py          # 전 레이어 실행 데모
 ```
 
 ---
